@@ -1,0 +1,111 @@
+[gd_scene load_steps=13 format=3 uid="uid://6gu4snxhqtoa"]
+
+[ext_resource type="Shader" uid="uid://b2a7o072hv8f2" path="res://map.gdshader" id="1_0xm2m"]
+[ext_resource type="Texture2D" uid="uid://d0dh1crkebbxb" path="res://Assets/Maps/worldmap1.png" id="2_h2yge"]
+[ext_resource type="Shader" uid="uid://c8rum8jg3748" path="res://landscape.gdshader" id="3_7mycd"]
+[ext_resource type="Script" uid="uid://bfghohe7351w" path="res://player_texture.gd" id="3_h2yge"]
+[ext_resource type="Shader" uid="uid://c6to8sk0n0qhh" path="res://growth_map.gdshader" id="4_1bvp3"]
+[ext_resource type="Texture2D" uid="uid://ddkdst5vphwq1" path="res://Assets/Maps/HuffmanPatterson_Figure1.png" id="4_7mycd"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0xm2m"]
+shader = ExtResource("1_0xm2m")
+shader_parameter/t_water = 0.01
+shader_parameter/t_shore = 0.02
+shader_parameter/t_mountain = 0.5
+shader_parameter/debug_view = 1
+shader_parameter/disp_pixels = 0.0
+shader_parameter/col_water = Color(0.11224202, 0.32291228, 0.7756264, 1)
+shader_parameter/col_shore = Color(1, 0.7526661, 0.52400917, 1)
+shader_parameter/col_land = Color(0.2466453, 0.62035495, 0.16585425, 1)
+shader_parameter/col_mountain = Color(0.43, 0.36908334, 0.3569, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_5vw27"]
+shader = ExtResource("3_7mycd")
+shader_parameter/t_water = 0.0570000027075
+shader_parameter/t_shore = 0.1630000077425
+shader_parameter/t_mountain = 0.7050000334875
+shader_parameter/debug_view = 1
+shader_parameter/disp_pixels = 0.0
+shader_parameter/col_water = Color(0, 0.40339828, 0.690385, 1)
+shader_parameter/col_shore = Color(0.42905837, 0.6601211, 0.75161314, 1)
+shader_parameter/col_land = Color(0.25, 0.63, 0.17, 1)
+shader_parameter/col_mountain_base = Color(0.5607049, 0.37854594, 0.34642068, 1)
+shader_parameter/col_mountain = Color(0.61, 0.5097567, 0.4026, 1)
+shader_parameter/col_mountain_high = Color(0.85, 0.76925, 0.68850005, 1)
+shader_parameter/col_mountain_top = Color(0.8920096, 0.8760069, 0.8485982, 1)
+shader_parameter/col_mountain_peak = Color(1, 1, 1, 1)
+shader_parameter/col_tundra = Color(0.79190326, 0.839404, 0.86721545, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_7mycd"]
+shader = ExtResource("4_1bvp3")
+shader_parameter/point_count = 3
+shader_parameter/poly = PackedVector2Array(0, 0, 0.06, 0.06, 0.06, 0.06, 0.06, 0.06, 0.02, 0.02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/fill_color = Color(0.87587196, 0.5715682, 0.24725834, 1)
+shader_parameter/outside_color = Color(0, 0, 0, 1)
+shader_parameter/edge_softness_px = 0.8190000389025
+shader_parameter/range = 0.025
+shader_parameter/coord_space = 0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_lquwl"]
+shader = ExtResource("4_1bvp3")
+shader_parameter/point_count = 0
+shader_parameter/poly = PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/fill_color = Color(0.78, 0.44199997, 0, 1)
+shader_parameter/outside_color = Color(0, 0, 0, 0)
+shader_parameter/edge_softness_px = 1.0
+shader_parameter/range = 0.005
+shader_parameter/coord_space = 0
+
+[sub_resource type="Gradient" id="Gradient_7mycd"]
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_272bh"]
+gradient = SubResource("Gradient_7mycd")
+
+[node name="Main" type="Node2D"]
+
+[node name="Node2D" type="Node2D" parent="."]
+position = Vector2(912, 499)
+
+[node name="Worldmap1" type="Sprite2D" parent="Node2D"]
+visible = false
+material = SubResource("ShaderMaterial_0xm2m")
+position = Vector2(-26, 258)
+texture = ExtResource("2_h2yge")
+
+[node name="Sprite2D" type="Sprite2D" parent="Node2D"]
+material = SubResource("ShaderMaterial_5vw27")
+position = Vector2(132, 17)
+texture = ExtResource("4_7mycd")
+
+[node name="Sprite2D2" type="Sprite2D" parent="Node2D"]
+visible = false
+z_index = 1
+material = SubResource("ShaderMaterial_7mycd")
+position = Vector2(132, 17)
+texture = ExtResource("4_7mycd")
+
+[node name="Control" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("3_h2yge")
+
+[node name="Map" type="TextureRect" parent="Control"]
+material = SubResource("ShaderMaterial_lquwl")
+layout_mode = 0
+offset_left = -367.0
+offset_top = -496.0
+offset_right = 1733.0
+offset_bottom = 554.0
+texture = ExtResource("4_7mycd")
+
+[node name="TextureRect" type="TextureRect" parent="Control"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+texture = SubResource("GradientTexture2D_272bh")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(1049, 513)
+zoom = Vector2(0.56, 0.625)
