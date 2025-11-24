@@ -1,9 +1,11 @@
-[gd_scene load_steps=13 format=3 uid="uid://6gu4snxhqtoa"]
+[gd_scene load_steps=21 format=3 uid="uid://6gu4snxhqtoa"]
 
+[ext_resource type="Texture2D" uid="uid://c15d6e8uvtg4h" path="res://Assets/Maps/desert_zones_lightbox.png" id="2_7mycd"]
 [ext_resource type="Shader" uid="uid://c8rum8jg3748" path="res://landscape.gdshader" id="3_7mycd"]
 [ext_resource type="Shader" uid="uid://c6to8sk0n0qhh" path="res://growth_map.gdshader" id="4_1bvp3"]
 [ext_resource type="Texture2D" uid="uid://ddkdst5vphwq1" path="res://Assets/Maps/HuffmanPatterson_Figure1.png" id="4_7mycd"]
 [ext_resource type="Script" uid="uid://b2rygeyeoh0x6" path="res://ai_attempt.gd" id="4_lquwl"]
+[ext_resource type="Shader" uid="uid://6gpl3efqbf7w" path="res://shaders/greenscreen.gdshader" id="5_272bh"]
 [ext_resource type="Script" uid="uid://bupx8b5ep2w4f" path="res://user_controller.gd" id="5_lquwl"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_5vw27"]
@@ -14,16 +16,20 @@ shader_parameter/t_mountain = 0.7050000334875
 shader_parameter/debug_view = 1
 shader_parameter/disp_pixels = 0.0
 shader_parameter/col_water = Color(0, 0.40339828, 0.690385, 1)
+shader_parameter/col_desert = Color(0.74803466, 0.62847096, 0.3168482, 1)
+shader_parameter/col_rainforest = Color(0, 0.3764706, 0.23921569, 1)
 shader_parameter/col_shore = Color(0.42905837, 0.6601211, 0.75161314, 1)
-shader_parameter/col_land = Color(0.25, 0.63, 0.17, 1)
+shader_parameter/col_land = Color(0.48235294, 0.7058824, 0.38039216, 1)
 shader_parameter/col_mountain_base = Color(0.5607049, 0.37854594, 0.34642068, 1)
 shader_parameter/col_mountain = Color(0.61, 0.5097567, 0.4026, 1)
 shader_parameter/col_mountain_high = Color(0.85, 0.76925, 0.68850005, 1)
 shader_parameter/col_mountain_top = Color(0.8920096, 0.8760069, 0.8485982, 1)
 shader_parameter/col_mountain_peak = Color(1, 1, 1, 1)
 shader_parameter/col_tundra = Color(0.79190326, 0.839404, 0.86721545, 1)
-shader_parameter/shore_threshold = 0.419
-shader_parameter/land_threshold = 0.55
+shader_parameter/shore_threshold = 0.51
+shader_parameter/shore_transition_threshold = 0.3
+shader_parameter/land_threshold = 0.56
+shader_parameter/humidity_map = ExtResource("2_7mycd")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_7mycd"]
 shader = ExtResource("4_1bvp3")
@@ -44,10 +50,30 @@ colors = PackedColorArray(0, 0, 0, 0.49803922, 0.26, 0.26, 0.26, 0.8392157)
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_5vw27"]
 gradient = SubResource("Gradient_272bh")
 
-[sub_resource type="Gradient" id="Gradient_7mycd"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_kek77"]
+shader = ExtResource("5_272bh")
+shader_parameter/tolerance = 0.2
 
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_272bh"]
-gradient = SubResource("Gradient_7mycd")
+[sub_resource type="ViewportTexture" id="ViewportTexture_4c57u"]
+viewport_path = NodePath("3DModels/City/SubViewport")
+
+[sub_resource type="BoxMesh" id="BoxMesh_7mycd"]
+size = Vector3(0.375, 1.2, 0.43)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_272bh"]
+size = Vector2(20, 20)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5vw27"]
+albedo_color = Color(0, 0.9607843, 0.047058824, 1)
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_kek77"]
+
+[sub_resource type="Sky" id="Sky_4c57u"]
+sky_material = SubResource("ProceduralSkyMaterial_kek77")
+
+[sub_resource type="Environment" id="Environment_efxa6"]
+background_mode = 2
+sky = SubResource("Sky_4c57u")
 
 [node name="Main" type="Node2D"]
 
@@ -111,6 +137,27 @@ offset_top = 460.0
 offset_right = -520.0
 offset_bottom = 476.0
 
+[node name="City" type="TextureRect" parent="CanvasLayer/Control"]
+material = SubResource("ShaderMaterial_kek77")
+layout_mode = 0
+offset_left = 37.0
+offset_top = 7.0
+offset_right = 549.0
+offset_bottom = 519.0
+scale = Vector2(0.005, 0.005)
+texture = SubResource("ViewportTexture_4c57u")
+
+[node name="ContextMenu" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Button" type="Button" parent="CanvasLayer/ContextMenu"]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
 [node name="Control" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 0
@@ -125,18 +172,42 @@ offset_right = 2100.0
 offset_bottom = 1050.0
 texture = ExtResource("4_7mycd")
 
-[node name="TextureRect" type="TextureRect" parent="Control"]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-texture = SubResource("GradientTexture2D_272bh")
-
 [node name="User" type="Node2D" parent="."]
 script = ExtResource("5_lquwl")
 
 [node name="Camera2D" type="Camera2D" parent="User"]
 position = Vector2(1049, 513)
-zoom = Vector2(0.57, 0.745)
+zoom = Vector2(0.5, 0.5)
+
+[node name="3DModels" type="Node3D" parent="."]
+
+[node name="City" type="Node3D" parent="3DModels"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="3DModels/City"]
+mesh = SubResource("BoxMesh_7mycd")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="3DModels/City"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.0200022, 0, -0.6276872)
+mesh = SubResource("BoxMesh_7mycd")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="3DModels/City"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.37011838, 0.32379067, -0.6276872)
+mesh = SubResource("BoxMesh_7mycd")
+
+[node name="Backdrop" type="MeshInstance3D" parent="3DModels/City"]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, -1)
+mesh = SubResource("PlaneMesh_272bh")
+surface_material_override/0 = SubResource("StandardMaterial3D_5vw27")
+
+[node name="SubViewport" type="SubViewport" parent="3DModels/City"]
+
+[node name="Camera3D" type="Camera3D" parent="3DModels/City/SubViewport"]
+transform = Transform3D(0.9004203, 0.11401224, -0.41981477, 0.045041148, 0.9354248, 0.35064474, 0.43268293, -0.3346366, 0.83714026, -0.3250066, 0.6439736, 1.0673395)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="3DModels"]
+environment = SubResource("Environment_efxa6")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="3DModels"]
 
 [connection signal="drag_ended" from="CanvasLayer/Control/HSlider" to="User" method="_on_h_slider_drag_ended"]
 [connection signal="drag_started" from="CanvasLayer/Control/HSlider" to="User" method="_on_h_slider_drag_started"]

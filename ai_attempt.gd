@@ -1,14 +1,16 @@
 extends Control
 
-const GROW_PIXELS_PER_SECOND := 50
+@onready var overlay_shader = preload("res://shaders/overlay.gdshader")
+
+var GROW_PIXELS_PER_SECOND := 200
 const OWNED_COLOR := Color(1,0,0,0.5)
 const WRAP_X := true
 
 # --- terrain thresholds (tune to your map) ---
-const WATER_R_MIN := 0.420  # water if col.r < this (your current rule was >0.419 pass-land)
+const WATER_R_MIN := 0.54  # water if col.r < this (your current rule was >0.419 pass-land)
 const MOUNTAIN_B_MIN := 0.705  # example: high blue = mountain; change to your rule
-const MOUNTAIN_COST := 6    # how many "budget units" a mountain pixel costs
-const SLOW_COST_SHARE := 0.45   # 30% of per-frame cost goes to mountains (tune)
+const MOUNTAIN_COST := 10    # how many "budget units" a mountain pixel costs
+const SLOW_COST_SHARE := 0.4   # 30% of per-frame cost goes to mountains (tune)
 
 @onready var Map: TextureRect = $Map
 @onready var user = $"../User"
@@ -21,6 +23,7 @@ var owner_img: Image
 var owner_tex: ImageTexture
 var owned: BitMap
 var queued: BitMap
+var selection_queued : bool = false
 
 # ---- two ring-buffer queues (fast = normal, slow = mountain) ----
 var fx := PackedInt32Array()
@@ -39,9 +42,16 @@ var sent_forces := 0
 var spot_chosen := false
 var first_spot_chosen := false
 
-var owned_lands = {
-	
-}
+
+const THRESHOLD_WATER : float = 0.42
+const THRESHOLD_GRASS : float = 0.58
+const THRESHOLD_MOUNTAIN : float = 0.410
+const THRESHOLD_PEAK : float = 0.410
+
+var TRUE_MOUNTAIN_CLAIM_ODDS = 12
+var TRUE_REGULAR_CLAIM_ODDS = 8
+var MOUNTAIN_CLAIM_ODDS = 1
+var REGULAR_CLAIM_ODDS = 1
 
 func _ready() -> void:
 	var base_tex := Map.texture
@@ -52,9 +62,14 @@ func _ready() -> void:
 	owner_tex = ImageTexture.create_from_image(owner_img)
 
 	owned = BitMap.new();  owned.create(Vector2i(W, H))
+	for i in range(20):
+		for j in range(20):
+			owner_img.set_pixelv(Vector2i(i,j), Color.RED)
+	owner_tex.update(owner_img)
 	queued = BitMap.new(); queued.create(Vector2i(W, H))
 
 	map_image = Map.texture.get_image()
+	map_image.resize(W, H)
 
 	_q_init_fast(W * H / 8 + 1024)
 	_q_init_slow(W * H / 8 + 1024)
@@ -62,6 +77,18 @@ func _ready() -> void:
 	var overlay := TextureRect.new()
 	overlay.stretch_mode = TextureRect.STRETCH_SCALE
 	overlay.texture = owner_tex
+	
+	var mat := ShaderMaterial.new()
+	mat.shader = overlay_shader
+
+	# 2. Set any shader parameters you need
+	mat.set_shader_parameter("mask_tex", owner_tex)
+	mat.set_shader_parameter("texel", Vector2(1.0 / W, 1.0 / H))
+
+	# 3. Assign the material to your TextureRect
+	overlay.material = mat
+	
+	overlay.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR  # Godot 4
 	overlay.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	overlay.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	Map.add_sibling(overlay)
@@ -72,29 +99,51 @@ func _screen_to_map_uv(screen_pos: Vector2) -> Vector2:
 	return ((screen_pos - r.position) / r.size).clamp(Vector2.ZERO, Vector2.ONE)
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.is_released() and event.button_index == MOUSE_BUTTON_LEFT:
+	
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var uv := _screen_to_map_uv(event.position)
+		print(uv)
 		if uv.x < 0.0 or uv.y < 0.0 or uv.x > 1.0 or uv.y > 1.0: return
 		var px := Vector2i(
 			clamp(int(round(uv.x * float(W - 1))), 0, W - 1),
 			clamp(int(round(uv.y * float(H - 1))), 0, H - 1)
 		)
-		if map_image.get_pixelv(px).r > 0.419:
 		
-			if not spot_chosen:
-					spot_chosen = true
-					_seed_circle(px.x, px.y, 4)
-			else:
-				sent_forces += 20
+		if map_image.get_pixelv(px).r >= THRESHOLD_GRASS:
+			if event.is_released():
+				if selection_queued:
+					if not spot_chosen:
+							spot_chosen = true
+							#owner_tex = ImageTexture.create_from_image(owner_img)
+							_seed_circle(px.x, px.y, 1)
+							sent_forces = 20
+					else:
+						sent_forces += user.selected
+						user.to_remove += user.selected
+					selection_queued = false
+			elif event.is_pressed():
+				selection_queued = true
+		else:
+			selection_queued = false
 
 func _process(delta: float) -> void:
 	if spot_chosen and not first_spot_chosen:
 		first_spot_chosen = true
-		user.growth_amount = 5
-		sent_forces = 1
-
+		user.growth_amount = 2
+		user._forces = 500
+	elif first_spot_chosen and GROW_PIXELS_PER_SECOND > 5:
+		GROW_PIXELS_PER_SECOND = 3
+		REGULAR_CLAIM_ODDS = TRUE_REGULAR_CLAIM_ODDS
+		MOUNTAIN_CLAIM_ODDS = TRUE_MOUNTAIN_CLAIM_ODDS
+	
 	if sent_forces <= 0: return
+	
+	var claim_cost = _process_growth(delta)
 
+	if claim_cost != null:
+		sent_forces -= 10*delta*claim_cost
+	
+func _process_growth(delta:float):
 	var cost_budget := int(GROW_PIXELS_PER_SECOND * delta * sent_forces)
 	if cost_budget <= 0: return
 
@@ -103,22 +152,39 @@ func _process(delta: float) -> void:
 	# 1) Split the cost budget
 	var slow_budget := int(floor(float(cost_budget) * SLOW_COST_SHARE))
 	var fast_budget := cost_budget - slow_budget
+	var num_claimed = 0
 
 	# 2) Spend slow bucket first (guaranteed mountain progress)
 	while slow_budget >= MOUNTAIN_COST and _slow_has():
 		var x := sx[s_head]; var y := sy[s_head]
 		s_head = (s_head + 1) % s_cap
-		if _claim_if_allowed(x, y, batch_pts):
-			_enqueue_neighbors(x, y)
+		if _is_claimable(x,y,batch_pts):
+			var bound = max(1, MOUNTAIN_CLAIM_ODDS - _get_owned_neighbors(x,y))
+			var rand := randi_range(1, bound)
+			if rand <= 1:
+				_claim(x,y,batch_pts)
+				_enqueue_neighbors(x, y)
+			else:
+				queued.set_bitv(Vector2i(x,y), false)   # <--- clear queued flag
+				_enqueue_neighbor(x,y)
 			slow_budget -= MOUNTAIN_COST
+			num_claimed += 2
 		# if claim failed (water/already owned), no cost consumed; keep looping
 
 	# 3) Spend fast bucket
 	while fast_budget >= 1 and _fast_has():
 		var x := fx[f_head]; var y := fy[f_head]
 		f_head = (f_head + 1) % f_cap
-		if _claim_if_allowed(x, y, batch_pts):
-			_enqueue_neighbors(x, y)
+		if _is_claimable(x,y,batch_pts):
+			var bound = max(1, REGULAR_CLAIM_ODDS - _get_owned_neighbors(x,y))
+			var rand := randi_range(1, bound)
+			if rand <= 1:
+				_claim(x,y,batch_pts)
+				_enqueue_neighbors(x, y)
+			else:
+				queued.set_bitv(Vector2i(x,y), false)   # <--- clear queued flag
+				_enqueue_neighbor(x,y)
+			num_claimed += 1
 			fast_budget -= 1
 		# if claim failed, no cost consumed
 
@@ -129,20 +195,45 @@ func _process(delta: float) -> void:
 		if _fast_has():
 			var x2 := fx[f_head]; var y2 := fy[f_head]
 			f_head = (f_head + 1) % f_cap
+			if _is_claimable(x2,y2,batch_pts):
+				var bound = max(1, REGULAR_CLAIM_ODDS - _get_owned_neighbors(x2,y2))
+				var rand := randi_range(1, bound)
+				if rand <= 1:
+					_claim(x2,y2,batch_pts)
+					_enqueue_neighbors(x2, y2)
+				else:
+					queued.set_bitv(Vector2i(x2,y2), false)   # <--- clear queued flag
+					_enqueue_neighbor(x2,y2)
+					
+				num_claimed += 1
+				leftovers -= 1
+			else:
+				pass
+			'''
 			if _claim_if_allowed(x2, y2, batch_pts):
 				_enqueue_neighbors(x2, y2)
+				num_claimed += 1
 				leftovers -= 1
 			else:
 				# no cost consumed
 				pass
+			'''
 		elif _slow_has() and leftovers >= MOUNTAIN_COST:
 			var xs := sx[s_head]; var ys := sy[s_head]
 			s_head = (s_head + 1) % s_cap
-			if _claim_if_allowed(xs, ys, batch_pts):
-				_enqueue_neighbors(xs, ys)
+			if _is_claimable(xs,ys,batch_pts):
+				var bound = max(1, MOUNTAIN_CLAIM_ODDS - _get_owned_neighbors(xs,ys))
+				var rand := randi_range(1, bound)
+				if rand <= 1:
+					_claim(xs,ys,batch_pts)
+					_enqueue_neighbors(xs, ys)
+				else:
+					queued.set_bitv(Vector2i(xs,ys), false)   # <--- clear queued flag
+					_enqueue_neighbor(xs,ys)
+					
+				num_claimed += 2
 				leftovers -= MOUNTAIN_COST
 			else:
-				# no cost consumed
 				pass
 		else:
 			break
@@ -155,9 +246,7 @@ func _process(delta: float) -> void:
 			var by := (packed >> 16) & 0xFFFF
 			owner_img.set_pixel(bx, by, OWNED_COLOR)
 		owner_tex.update(owner_img)
-
-	sent_forces -= 10*delta
-
+	return num_claimed
 
 # -------- terrain logic --------
 func is_water(col: Color) -> bool:
@@ -177,11 +266,43 @@ func _claim_if_allowed(x:int, y:int, batch_pts: PackedInt32Array) -> bool:
 	var col := map_image.get_pixelv(p)
 	if is_water(col):
 		return false
+	else:
+		if col.r > THRESHOLD_MOUNTAIN:
+			user.owned_lands["mountainous"] += 1
+		elif col.r > THRESHOLD_GRASS:
+			user.owned_lands["grass"] += 1
+			
 
 	# Claim
 	owned.set_bitv(p, true)
 	queued.set_bitv(p, false)
 	batch_pts.push_back((y << 16) | x)
+	return true
+
+func _claim(x:int, y:int, batch_pts: PackedInt32Array) -> bool:
+	var p := Vector2i(x, y)
+	var col := map_image.get_pixelv(p)
+	if col.r > THRESHOLD_MOUNTAIN:
+		user.owned_lands["mountainous"] += 1
+	elif col.r > THRESHOLD_GRASS:
+		user.owned_lands["grass"] += 1
+	else:
+		return false
+
+	# Claim
+	owned.set_bitv(p, true)
+	queued.set_bitv(p, false)
+	batch_pts.push_back((y << 16) | x)
+	return true
+
+
+func _is_claimable(x:int, y:int, batch_pts: PackedInt32Array) -> bool:
+	var p := Vector2i(x, y)
+	if owned.get_bitv(p):
+		return false
+	var col := map_image.get_pixelv(p)
+	if is_water(col):
+		return false
 	return true
 
 # Enqueue neighbors into fast/slow queues based on their terrain type
@@ -190,6 +311,23 @@ func _enqueue_neighbors(x:int, y:int) -> void:
 	_enqueue_neighbor(x-1, y)
 	_enqueue_neighbor(x, y+1)
 	_enqueue_neighbor(x, y-1)
+	#_enqueue_neighbor(x+1, y+1)
+	#_enqueue_neighbor(x-1, y-1)
+	#_enqueue_neighbor(x+1, y-1)
+	#_enqueue_neighbor(x-1, y+1)
+
+func _get_owned_neighbors(x:int,y:int)->int:
+	var ret = 0
+	ret += int(owned.get_bitv(Vector2i(x+1, y)))
+	ret += int(owned.get_bitv(Vector2i(x-1, y)))
+	ret += int(owned.get_bitv(Vector2i(x, y+1)))
+	ret += int(owned.get_bitv(Vector2i(x, y-1)))
+	#ret += int(owned.get_bitv(Vector2i(x+1, y+1)))
+	#ret += int(owned.get_bitv(Vector2i(x-1, y-1)))
+	#ret += int(owned.get_bitv(Vector2i(x+1, y-1)))
+	#ret += int(owned.get_bitv(Vector2i(x-1, y+1)))
+	
+	return ret
 
 func _enqueue_neighbor(nx:int, ny:int) -> void:
 	if WRAP_X:
@@ -278,6 +416,7 @@ func _seed_circle(cx:int, cy:int, r:int) -> void:
 			var col := map_image.get_pixelv(p)
 			if is_water(col): continue
 			queued.set_bitv(p, true)
+			_process_growth(0.001)
 			if is_mountain(col):
 				_slow_push(xx, yy)
 			else:

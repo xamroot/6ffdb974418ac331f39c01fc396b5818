@@ -13,6 +13,8 @@ uniform float disp_pixels = 0.0;
 
 /* class colors for debug_view=1 */
 uniform vec4 col_water     : source_color = vec4(0.06, 0.21, 0.54, 1.0);
+uniform vec4 col_desert    : source_color = vec4(0.06, 0.21, 0.54, 1.0);
+uniform vec4 col_rainforest    : source_color = vec4(0.06, 0.21, 0.54, 1.0);
 uniform vec4 col_shore     : source_color = vec4(0.37, 0.61, 0.80, 1.0);
 uniform vec4 col_land      : source_color = vec4(0.25, 0.63, 0.17, 1.0);
 uniform vec4 col_mountain_base  : source_color = vec4(0.71, 0.24, 0.16, 1.0);
@@ -22,9 +24,11 @@ uniform vec4 col_mountain_top  : source_color = vec4(0.71, 0.24, 0.16, 1.0);
 uniform vec4 col_mountain_peak  : source_color = vec4(0.71, 0.24, 0.16, 1.0);
 uniform vec4 col_tundra  : source_color = vec4(0.71, 0.24, 0.16, 1.0);
 
-uniform float shore_threshold = 0.419;
+uniform float shore_threshold = 0.425;
+uniform float shore_transition_threshold = 0.416;
 
 uniform float land_threshold = 0.55;
+uniform sampler2D humidity_map;
 
 /* ---------- helpers ---------- */
 vec3 rgb2hsv(vec3 c) {
@@ -79,6 +83,8 @@ void fragment() {
     }
 
     vec4 col = texture(TEXTURE, UV);
+	vec4 humidity_col = texture(humidity_map,UV);
+
 	float magnitude = col.r / 255.0;
 	if (col.r >= 0.86)
 	{
@@ -102,9 +108,20 @@ void fragment() {
 	}
 	else if (col.r >= land_threshold)
 	{
-		if (UV.y >= 0.85 || UV.y <= 0.17)
+
+
+		if (humidity_col.b > 0.95)
 		{
 			COLOR = col_tundra;
+		}
+		else if (humidity_col.r > 0.82 || (humidity_col.g > 0.6 && humidity_col.b < 0.6))
+		{
+			COLOR = col_desert;
+		}
+		else if (humidity_col.r > 0.8 || (humidity_col.g > 0.5 && humidity_col.b < 0.6))
+		{
+			COLOR = mix(col_desert, col_land, smoothstep(1.0,0.0,humidity_col.r));
+
 		}
 		else
 		{
@@ -117,6 +134,7 @@ void fragment() {
 	}
 	else
 	{
-		COLOR = col_water;
+
+		COLOR = mix(col_water, col_shore, smoothstep(0.2,0.8,col.r));
 	}
 }

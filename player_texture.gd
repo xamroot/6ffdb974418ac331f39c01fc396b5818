@@ -318,7 +318,6 @@ func _seed_frontier_from_owned_disc(center_px: Vector2i, radius_px:int) -> void:
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var uv := _screen_to_map_uv(event.position)
-		print(uv)
 		if uv.x < 0.0 or uv.y < 0.0 or uv.x > 1.0 or uv.y > 1.0:
 			return
 		var px := Vector2i(

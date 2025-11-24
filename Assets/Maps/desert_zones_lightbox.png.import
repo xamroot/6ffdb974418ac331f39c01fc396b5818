@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d0dh1crkebbxb"
-path="res://.godot/imported/worldmap1.png-46b6166d7c085038086a3f97acc89fc2.ctex"
+uid="uid://c15d6e8uvtg4h"
+path="res://.godot/imported/desert_zones_lightbox.png-28c678fa0d497a87fcd4004a05dc9bc1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Maps/worldmap1.png"
-dest_files=["res://.godot/imported/worldmap1.png-46b6166d7c085038086a3f97acc89fc2.ctex"]
+source_file="res://Assets/Maps/desert_zones_lightbox.png"
+dest_files=["res://.godot/imported/desert_zones_lightbox.png-28c678fa0d497a87fcd4004a05dc9bc1.ctex"]
 
 [params]
 
